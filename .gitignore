@@ -28,6 +28,8 @@ build/
 .idea
 .gradle
 local.properties
+google-services.json
+android/app/google-services.json
 *.iml
 *.hprof
 .cxx/
@@ -40,6 +42,11 @@ local.properties
 node_modules/
 npm-debug.log
 yarn-error.log
+
+# Local app config / generated metadata
+.env
+.env.*
+supabase/.temp/
 
 # fastlane
 #

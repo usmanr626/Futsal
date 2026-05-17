@@ -23,6 +23,7 @@ import {
   notifyInBackground,
   notifyMatchRequestVote,
   notifyMatchScheduled,
+  sendDueMatchReminders,
 } from '../../services/notificationService';
 import {colors, spacing} from '../../theme/theme';
 import type {
@@ -62,6 +63,7 @@ export function MatchesScreen() {
       setRequests(requestRows.requests);
       setRequestParticipants(requestRows.participants);
       setVotes(requestRows.votes);
+      notifyInBackground(sendDueMatchReminders(matchRows));
     } catch (error) {
       Alert.alert('Load error', error instanceof Error ? error.message : 'Try again.');
     } finally {

@@ -14,6 +14,10 @@ import {StatPill} from '../../components/ui/StatPill';
 import {useAuth} from '../../context/AuthContext';
 import {useCurrentTime} from '../../hooks/useCurrentTime';
 import {fetchMatchRequests, fetchMatches} from '../../services/matchService';
+import {
+  notifyInBackground,
+  sendDueMatchReminders,
+} from '../../services/notificationService';
 import {colors, spacing} from '../../theme/theme';
 import {isPreviousMatch, isUpcomingMatch} from '../../utils/match';
 import type {Match, MatchRequest} from '../../types/domain';
@@ -38,6 +42,7 @@ export function HomeScreen() {
       ]);
       setMatches(matchRows);
       setRequests(requestRows.requests);
+      notifyInBackground(sendDueMatchReminders(matchRows));
     } catch (error) {
       Alert.alert('Load error', error instanceof Error ? error.message : 'Try again.');
     } finally {

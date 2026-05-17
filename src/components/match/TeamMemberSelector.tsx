@@ -2,7 +2,7 @@ import React from 'react';
 import {StyleSheet, View} from 'react-native';
 
 import {spacing} from '../../theme/theme';
-import type {Profile} from '../../types/domain';
+import type {PlayerStatSummary, Profile} from '../../types/domain';
 import {AppText} from '../ui/AppText';
 import {PlayerChips} from './PlayerChips';
 
@@ -12,6 +12,7 @@ type TeamMemberSelectorProps = {
   teamAUserIds: string[];
   teamBName: string;
   teamBUserIds: string[];
+  statsByUserId?: Record<string, PlayerStatSummary>;
   onChange: (next: {teamAUserIds: string[]; teamBUserIds: string[]}) => void;
 };
 
@@ -21,6 +22,7 @@ export function TeamMemberSelector({
   teamAUserIds,
   teamBName,
   teamBUserIds,
+  statsByUserId,
   onChange,
 }: TeamMemberSelectorProps) {
   const toggleTeam = (userId: string, team: 'team_a' | 'team_b') => {
@@ -58,6 +60,7 @@ export function TeamMemberSelector({
         <PlayerChips
           profiles={profiles}
           selectedIds={teamAUserIds}
+          statsByUserId={statsByUserId}
           onToggle={profileId => toggleTeam(profileId, 'team_a')}
         />
       </View>
@@ -69,6 +72,7 @@ export function TeamMemberSelector({
         <PlayerChips
           profiles={profiles}
           selectedIds={teamBUserIds}
+          statsByUserId={statsByUserId}
           onToggle={profileId => toggleTeam(profileId, 'team_b')}
         />
       </View>

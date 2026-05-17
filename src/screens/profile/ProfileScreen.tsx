@@ -1,16 +1,20 @@
+import {useFocusEffect} from '@react-navigation/native';
 import {BellRing, UserPlus} from 'lucide-react-native';
-import React, {useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {Alert, StyleSheet, View} from 'react-native';
 
 import {AvatarPicker} from '../../components/profile/AvatarPicker';
+import {PlayerStatsCard} from '../../components/profile/PlayerStatsCard';
 import {AppText} from '../../components/ui/AppText';
 import {Button} from '../../components/ui/Button';
 import {Card} from '../../components/ui/Card';
 import {Screen} from '../../components/ui/Screen';
 import {TextField} from '../../components/ui/TextField';
 import {useAuth} from '../../context/AuthContext';
+import {fetchPlayerStats} from '../../services/matchService';
 import {sendAdminBroadcastNotification} from '../../services/notificationService';
 import {colors, spacing} from '../../theme/theme';
+import type {PlayerStats} from '../../types/domain';
 import {playerName} from '../../utils/player';
 import {maxLength, required, username as validateUsername} from '../../utils/validation';
 
@@ -37,9 +41,28 @@ export function ProfileScreen() {
     profile?.favorite_position ?? '',
   );
   const [errors, setErrors] = useState<ProfileErrors>({});
+  const [stats, setStats] = useState<PlayerStats | null>(null);
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [broadcastError, setBroadcastError] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
+
+  const loadStats = useCallback(async () => {
+    if (!profile?.id) {
+      return;
+    }
+
+    try {
+      setStats(await fetchPlayerStats(profile.id));
+    } catch (error) {
+      Alert.alert('Stats error', error instanceof Error ? error.message : 'Try again.');
+    }
+  }, [profile?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadStats();
+    }, [loadStats]),
+  );
 
   const validate = () => {
     const nextErrors: ProfileErrors = {
@@ -126,6 +149,10 @@ export function ProfileScreen() {
           <AppText variant="title">{playerName(profile)}</AppText>
           <AppText muted>{isAdmin ? 'Admin' : 'Player'}</AppText>
         </View>
+      </View>
+
+      <View style={styles.statsCard}>
+        <PlayerStatsCard stats={stats} />
       </View>
 
       {!hasAnyAdmin ? (
@@ -229,6 +256,9 @@ const styles = StyleSheet.create({
   },
   card: {
     gap: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  statsCard: {
     marginBottom: spacing.lg,
   },
   broadcastInput: {

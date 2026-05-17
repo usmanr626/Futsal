@@ -121,6 +121,26 @@ export type LeaderboardRowData = {
   latest_motm_at?: string | null;
 };
 
+export type PlayerStatSummary = {
+  user_id: string;
+  goals: number;
+  matches_played: number;
+  motm_count: number;
+};
+
+export type PlayerStats = PlayerStatSummary & {
+  wins: number;
+  win_rate: number;
+  last_played_at: string | null;
+};
+
+export type FunAward = {
+  id: string;
+  title: string;
+  winner: string;
+  detail: string;
+};
+
 export type MatchComment = {
   id: string;
   match_id: string;

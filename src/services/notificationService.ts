@@ -1,4 +1,10 @@
 import {supabase} from '../config/supabase';
+import type {Match} from '../types/domain';
+
+type ReminderType = '24h' | '2h';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
 async function invokeNotification(body: Record<string, unknown>) {
   const {data: authData, error: sessionError} = await supabase.auth.getSession();
@@ -75,8 +81,45 @@ export function notifyMatchCommentCreated(commentId: string) {
   return invokeNotification({type: 'match_comment_created', commentId});
 }
 
+export function notifyMatchReminder(matchId: string, reminderType: ReminderType) {
+  return invokeNotification({type: 'match_reminder', matchId, reminderType});
+}
+
+export function sendDueMatchReminders(matches: Match[]) {
+  const now = Date.now();
+  const reminderTasks = matches.flatMap(match =>
+    dueReminderTypes(match, now).map(reminderType =>
+      notifyMatchReminder(match.id, reminderType),
+    ),
+  );
+
+  return Promise.all(reminderTasks);
+}
+
 export function notifyInBackground(task: Promise<unknown>) {
   task.catch(() => {
     // Push delivery should never block the main match flow.
   });
+}
+
+function dueReminderTypes(match: Match, now: number): ReminderType[] {
+  const status = match.status as string;
+  if (status !== 'upcoming' && status !== 'scheduled') {
+    return [];
+  }
+
+  const msUntilMatch = new Date(match.match_date).getTime() - now;
+  if (msUntilMatch <= 0) {
+    return [];
+  }
+
+  if (msUntilMatch <= TWO_HOURS_MS) {
+    return ['2h'];
+  }
+
+  if (msUntilMatch <= DAY_MS) {
+    return ['24h'];
+  }
+
+  return [];
 }

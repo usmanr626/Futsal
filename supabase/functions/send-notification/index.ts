@@ -6,6 +6,7 @@ type NotificationPayload =
   | {type: 'match_request_created'; requestId: string}
   | {type: 'match_request_vote'; requestId: string}
   | {type: 'match_scheduled'; matchId: string}
+  | {type: 'match_reminder'; matchId: string; reminderType: '24h' | '2h'}
   | {type: 'match_comment_created'; commentId: string};
 
 type ProfileRow = {
@@ -30,6 +31,9 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const dayMs = 24 * 60 * 60 * 1000;
+const twoHoursMs = 2 * 60 * 60 * 1000;
 
 let cachedGoogleToken: {token: string; expiresAt: number} | null = null;
 let supabaseAdminClient: ReturnType<typeof createClient> | null = null;
@@ -94,6 +98,9 @@ async function handleNotification(actorId: string, payload: NotificationPayload)
 
     case 'match_scheduled':
       return handleMatchScheduled(actorId, payload.matchId);
+
+    case 'match_reminder':
+      return handleMatchReminder(actorId, payload.matchId, payload.reminderType);
 
     case 'match_comment_created':
       return handleMatchCommentCreated(actorId, payload.commentId);
@@ -225,6 +232,47 @@ async function handleMatchScheduled(actorId: string, matchId: string) {
     title: 'Match scheduled',
     body: `${match.title} is set for ${formatDate(match.match_date)}.`,
     data: {event: 'match_scheduled', matchId},
+  });
+}
+
+async function handleMatchReminder(
+  actorId: string,
+  matchId: string,
+  reminderType: '24h' | '2h',
+) {
+  assertUuid(matchId, 'matchId');
+
+  if (reminderType !== '24h' && reminderType !== '2h') {
+    throw new HttpError(400, 'Reminder type is invalid');
+  }
+
+  const match = await getMatch(matchId);
+  const status = match.status as string;
+  if (status !== 'upcoming' && status !== 'scheduled') {
+    return {recipients: 0, devices: 0, sent: 0, skipped: 'not_upcoming'};
+  }
+
+  const msUntilMatch = new Date(match.match_date).getTime() - Date.now();
+  const due =
+    reminderType === '2h'
+      ? msUntilMatch > 0 && msUntilMatch <= twoHoursMs
+      : msUntilMatch > twoHoursMs && msUntilMatch <= dayMs;
+
+  if (!due) {
+    return {recipients: 0, devices: 0, sent: 0, skipped: 'not_due'};
+  }
+
+  const recorded = await recordMatchReminder(matchId, reminderType, actorId);
+  if (!recorded) {
+    return {recipients: 0, devices: 0, sent: 0, skipped: 'already_sent'};
+  }
+
+  return notifyUsers({
+    recipientUserIds: await getActiveUserIds(),
+    type: 'match_reminder',
+    title: reminderType === '24h' ? 'Match reminder' : 'Match starts soon',
+    body: `${match.title} is set for ${formatDate(match.match_date)}.`,
+    data: {event: 'match_reminder', matchId, reminderType},
   });
 }
 
@@ -458,6 +506,29 @@ async function getMatch(matchId: string) {
   }
 
   return data;
+}
+
+async function recordMatchReminder(
+  matchId: string,
+  reminderType: '24h' | '2h',
+  triggeredBy: string,
+) {
+  const supabaseAdmin = getSupabaseAdmin();
+  const {error} = await supabaseAdmin.from('match_reminders').insert({
+    match_id: matchId,
+    reminder_type: reminderType,
+    triggered_by: triggeredBy,
+  });
+
+  if (!error) {
+    return true;
+  }
+
+  if (error.code === '23505') {
+    return false;
+  }
+
+  throw new HttpError(500, error.message);
 }
 
 async function getMatchComment(commentId: string) {

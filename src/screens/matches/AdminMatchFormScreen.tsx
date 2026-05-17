@@ -23,6 +23,7 @@ import {
   fetchGoals,
   fetchMatch,
   fetchMatchParticipants,
+  fetchPlayerStatSummaries,
   fetchProfiles,
   upsertMatch,
   upsertMatchParticipants,
@@ -32,7 +33,12 @@ import {
   notifyMatchScheduled,
 } from '../../services/notificationService';
 import {colors, spacing} from '../../theme/theme';
-import type {Goal, MatchStatus, Profile} from '../../types/domain';
+import type {
+  Goal,
+  MatchStatus,
+  PlayerStatSummary,
+  Profile,
+} from '../../types/domain';
 import type {RootStackParamList} from '../../types/navigation';
 import {playerName} from '../../utils/player';
 import {validateTeamSelection} from '../../utils/teamValidation';
@@ -85,6 +91,9 @@ export function AdminMatchFormScreen() {
   const [notes, setNotes] = useState('');
   const [savedMatchId, setSavedMatchId] = useState(matchId);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [playerStats, setPlayerStats] = useState<
+    Record<string, PlayerStatSummary>
+  >({});
   const [goals, setGoals] = useState<Goal[]>([]);
   const [goalScorerId, setGoalScorerId] = useState<string | null>(null);
   const [goalTeam, setGoalTeam] = useState<'team_a' | 'team_b'>('team_a');
@@ -121,9 +130,13 @@ export function AdminMatchFormScreen() {
   }, []);
 
   const load = useCallback(async () => {
-    const profileRows = await fetchProfiles();
+    const [profileRows, statRows] = await Promise.all([
+      fetchProfiles(),
+      fetchPlayerStatSummaries(),
+    ]);
     const activeRows = profileRows.filter(profile => profile.is_active);
     setProfiles(profileRows);
+    setPlayerStats(statRows);
     setGoalScorerId(current => current ?? activeRows[0]?.id ?? null);
 
     if (!matchId) {
@@ -446,6 +459,7 @@ export function AdminMatchFormScreen() {
         </View>
         <TeamMemberSelector
           profiles={activeProfiles}
+          statsByUserId={playerStats}
           teamAName={teamAName}
           teamAUserIds={teamAUserIds}
           teamBName={teamBName}

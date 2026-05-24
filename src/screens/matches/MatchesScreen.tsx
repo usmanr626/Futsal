@@ -1,7 +1,12 @@
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+  type RouteProp,
+} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Plus} from 'lucide-react-native';
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {Alert, StyleSheet, View} from 'react-native';
 
 import {MatchCard} from '../../components/match/MatchCard';
@@ -33,16 +38,21 @@ import type {
   MatchRequestVote,
   VoteChoice,
 } from '../../types/domain';
-import type {RootStackParamList} from '../../types/navigation';
+import type {
+  MatchesTab,
+  RootStackParamList,
+  TabParamList,
+} from '../../types/navigation';
 import {isPreviousMatch, isUpcomingMatch} from '../../utils/match';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
-type Tab = 'upcoming' | 'previous' | 'requests';
+type Route = RouteProp<TabParamList, 'Matches'>;
 
 export function MatchesScreen() {
   const navigation = useNavigation<Navigation>();
+  const route = useRoute<Route>();
   const {session, isAdmin} = useAuth();
-  const [tab, setTab] = useState<Tab>('upcoming');
+  const [tab, setTab] = useState<MatchesTab>('upcoming');
   const [matches, setMatches] = useState<Match[]>([]);
   const [requests, setRequests] = useState<MatchRequest[]>([]);
   const [requestParticipants, setRequestParticipants] = useState<
@@ -73,9 +83,19 @@ export function MatchesScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (route.params?.initialTab) {
+        setTab(route.params.initialTab);
+      }
+
       load();
-    }, [load]),
+    }, [load, route.params?.initialTab]),
   );
+
+  useEffect(() => {
+    if (route.params?.initialTab) {
+      setTab(route.params.initialTab);
+    }
+  }, [route.params?.initialTab]);
 
   const visibleMatches = useMemo(() => {
     if (tab === 'upcoming') {

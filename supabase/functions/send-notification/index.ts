@@ -7,7 +7,8 @@ type NotificationPayload =
   | {type: 'match_request_vote'; requestId: string}
   | {type: 'match_scheduled'; matchId: string}
   | {type: 'match_reminder'; matchId: string; reminderType: '24h' | '2h'}
-  | {type: 'match_comment_created'; commentId: string};
+  | {type: 'match_comment_created'; commentId: string}
+  | {type: 'chat_message_created'; messageId: string};
 
 type ProfileRow = {
   id: string;
@@ -105,6 +106,9 @@ async function handleNotification(actorId: string, payload: NotificationPayload)
     case 'match_comment_created':
       return handleMatchCommentCreated(actorId, payload.commentId);
 
+    case 'chat_message_created':
+      return handleChatMessageCreated(actorId, payload.messageId);
+
     default:
       throw new HttpError(400, 'Unknown notification type');
   }
@@ -159,6 +163,29 @@ async function handleMatchCommentCreated(actorId: string, commentId: string) {
       event: 'match_comment_created',
       commentId,
       matchId: comment.match_id,
+    },
+  });
+}
+
+async function handleChatMessageCreated(actorId: string, messageId: string) {
+  assertUuid(messageId, 'messageId');
+
+  const message = await getChatMessage(messageId);
+  if (message.user_id !== actorId && !(await isAdmin(actorId))) {
+    throw new HttpError(403, 'You cannot notify for this chat message');
+  }
+
+  const sender = await getProfile(message.user_id);
+  const recipientUserIds = (await getActiveUserIds()).filter(id => id !== actorId);
+
+  return notifyUsers({
+    recipientUserIds,
+    type: 'chat_message_created',
+    title: 'New group chat message',
+    body: `${displayName(sender)}: ${truncate(message.body, 90)}`,
+    data: {
+      event: 'chat_message_created',
+      messageId,
     },
   });
 }
@@ -560,6 +587,29 @@ async function getMatchComment(commentId: string) {
   };
 }
 
+async function getChatMessage(messageId: string) {
+  const supabaseAdmin = getSupabaseAdmin();
+  const {data, error} = await supabaseAdmin
+    .from('chat_messages')
+    .select('id, user_id, body')
+    .eq('id', messageId)
+    .maybeSingle();
+
+  if (error) {
+    throw new HttpError(500, error.message);
+  }
+
+  if (!data) {
+    throw new HttpError(404, 'Chat message not found');
+  }
+
+  return {
+    id: data.id as string,
+    user_id: data.user_id as string,
+    body: data.body as string,
+  };
+}
+
 async function getProfile(userId: string) {
   const supabaseAdmin = getSupabaseAdmin();
   const {data, error} = await supabaseAdmin
@@ -668,6 +718,14 @@ function formatDate(value: string) {
     timeStyle: 'short',
     timeZone: 'Asia/Karachi',
   }).format(new Date(value));
+}
+
+function truncate(value: string, maxLength: number) {
+  const cleanValue = value.replace(/\s+/g, ' ').trim();
+
+  return cleanValue.length > maxLength
+    ? `${cleanValue.slice(0, maxLength - 3)}...`
+    : cleanValue;
 }
 
 function stringifyData(data: Record<string, string>) {

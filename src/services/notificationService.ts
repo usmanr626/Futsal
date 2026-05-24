@@ -81,6 +81,10 @@ export function notifyMatchCommentCreated(commentId: string) {
   return invokeNotification({type: 'match_comment_created', commentId});
 }
 
+export function notifyChatMessageCreated(messageId: string) {
+  return invokeNotification({type: 'chat_message_created', messageId});
+}
+
 export function notifyMatchReminder(matchId: string, reminderType: ReminderType) {
   return invokeNotification({type: 'match_reminder', matchId, reminderType});
 }

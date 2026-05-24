@@ -1,4 +1,9 @@
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useNavigation,
+  type CompositeNavigationProp,
+} from '@react-navigation/native';
+import type {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {CalendarPlus, Plus} from 'lucide-react-native';
 import React, {useCallback, useMemo, useState} from 'react';
@@ -21,9 +26,16 @@ import {
 import {colors, spacing} from '../../theme/theme';
 import {isPreviousMatch, isUpcomingMatch} from '../../utils/match';
 import type {Match, MatchRequest} from '../../types/domain';
-import type {RootStackParamList} from '../../types/navigation';
+import type {
+  MatchesTab,
+  RootStackParamList,
+  TabParamList,
+} from '../../types/navigation';
 
-type Navigation = NativeStackNavigationProp<RootStackParamList>;
+type Navigation = CompositeNavigationProp<
+  BottomTabNavigationProp<TabParamList, 'Home'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 export function HomeScreen() {
   const navigation = useNavigation<Navigation>();
@@ -54,6 +66,28 @@ export function HomeScreen() {
     useCallback(() => {
       load();
     }, [load]),
+  );
+
+  const openMatch = useCallback(
+    (matchId: string) => {
+      const parentNavigation =
+        navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
+
+      if (parentNavigation) {
+        parentNavigation.navigate('MatchDetail', {matchId});
+        return;
+      }
+
+      navigation.navigate('MatchDetail', {matchId});
+    },
+    [navigation],
+  );
+
+  const openMatchesTab = useCallback(
+    (initialTab: MatchesTab) => {
+      navigation.navigate('Matches', {initialTab});
+    },
+    [navigation],
   );
 
   const nextMatch = useMemo(
@@ -108,9 +142,22 @@ export function HomeScreen() {
       </View>
 
       <View style={styles.stats}>
-        <StatPill label="Upcoming" value={upcomingCount} />
-        <StatPill label="Requests" value={openRequests} tone="blue" />
-        <StatPill label="Played" value={playedCount} />
+        <StatPill
+          label="Upcoming"
+          value={upcomingCount}
+          onPress={() => openMatchesTab('upcoming')}
+        />
+        <StatPill
+          label="Requests"
+          value={openRequests}
+          onPress={() => openMatchesTab('requests')}
+          tone="blue"
+        />
+        <StatPill
+          label="Played"
+          value={playedCount}
+          onPress={() => openMatchesTab('previous')}
+        />
       </View>
 
       <View style={styles.section}>
@@ -118,7 +165,7 @@ export function HomeScreen() {
         {nextMatch ? (
           <MatchCard
             match={nextMatch}
-            onPress={() => navigation.navigate('MatchDetail', {matchId: nextMatch.id})}
+            onPress={() => openMatch(nextMatch.id)}
           />
         ) : (
           <EmptyState
@@ -133,9 +180,7 @@ export function HomeScreen() {
         {latestPreviousMatch ? (
           <MatchCard
             match={latestPreviousMatch}
-            onPress={() =>
-              navigation.navigate('MatchDetail', {matchId: latestPreviousMatch.id})
-            }
+            onPress={() => openMatch(latestPreviousMatch.id)}
           />
         ) : (
           <Card>

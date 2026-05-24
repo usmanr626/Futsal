@@ -2,6 +2,8 @@ import type {NavigatorScreenParams} from '@react-navigation/native';
 
 import type {MatchStatus, MediaType} from './domain';
 
+export type MatchesTab = 'upcoming' | 'previous' | 'requests';
+
 export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<TabParamList> | undefined;
   MatchDetail: {matchId: string};
@@ -14,7 +16,8 @@ export type RootStackParamList = {
 
 export type TabParamList = {
   Home: undefined;
-  Matches: undefined;
+  Matches: {initialTab?: MatchesTab} | undefined;
+  Chat: undefined;
   Leaderboard: undefined;
   Profile: undefined;
 };

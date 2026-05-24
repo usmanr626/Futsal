@@ -21,7 +21,10 @@ export function MatchCard({match, onPress}: MatchCardProps) {
     isScheduledMatch(match) && hasMatchPassed(match) ? 'previous' : match.status;
 
   return (
-    <Pressable onPress={onPress}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({pressed}) => [styles.pressable, pressed && styles.pressed]}>
       <Card style={styles.card}>
         <View style={styles.header}>
           <View>
@@ -77,6 +80,12 @@ export function MatchCard({match, onPress}: MatchCardProps) {
 }
 
 const styles = StyleSheet.create({
+  pressable: {
+    width: '100%',
+  },
+  pressed: {
+    opacity: 0.72,
+  },
   card: {
     gap: spacing.md,
   },

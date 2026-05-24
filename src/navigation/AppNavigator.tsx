@@ -1,7 +1,13 @@
 import {DarkTheme, NavigationContainer} from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {CalendarDays, Home, Trophy, User} from 'lucide-react-native';
+import {
+  CalendarDays,
+  Home,
+  MessageCircle,
+  Trophy,
+  User,
+} from 'lucide-react-native';
 import React from 'react';
 import {ActivityIndicator, StyleSheet, View} from 'react-native';
 
@@ -9,6 +15,7 @@ import {AppText} from '../components/ui/AppText';
 import {useAuth} from '../context/AuthContext';
 import {AuthScreen} from '../screens/auth/AuthScreen';
 import {CompleteProfileScreen} from '../screens/auth/CompleteProfileScreen';
+import {ChatScreen} from '../screens/chat/ChatScreen';
 import {HomeScreen} from '../screens/home/HomeScreen';
 import {LeaderboardScreen} from '../screens/leaderboard/LeaderboardScreen';
 import {AdminMatchFormScreen} from '../screens/matches/AdminMatchFormScreen';
@@ -42,6 +49,7 @@ const tabIcons: Record<
 > = {
   Home: ({color, size}) => <Home color={color} size={size} />,
   Matches: ({color, size}) => <CalendarDays color={color} size={size} />,
+  Chat: ({color, size}) => <MessageCircle color={color} size={size} />,
   Leaderboard: ({color, size}) => <Trophy color={color} size={size} />,
   Profile: ({color, size}) => <User color={color} size={size} />,
 };
@@ -136,6 +144,7 @@ function MainTabs() {
       })}>
       <Tabs.Screen name="Home" component={HomeScreen} />
       <Tabs.Screen name="Matches" component={MatchesScreen} />
+      <Tabs.Screen name="Chat" component={ChatScreen} />
       <Tabs.Screen name="Leaderboard" component={LeaderboardScreen} />
       <Tabs.Screen name="Profile" component={ProfileScreen} />
     </Tabs.Navigator>
